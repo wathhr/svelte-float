@@ -1,0 +1,68 @@
+$selector: '.tooltip' !default;
+$is-transparent: false !default;
+
+#{$selector}-wrapper {
+  --_bg: hsl(0, 0%, 12%);
+  --_fg: hsl(0, 0%, 98%);
+
+  position: absolute;
+  isolation: isolate;
+  width: max-content;
+  max-width: calc(100vw - 1rem);
+  padding: 0.2em 0.35em;
+  top: 0;
+  left: 0;
+
+  transform-origin: var(--_origin);
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
+  animation-duration: 125ms;
+
+  border-radius: 4px;
+  color: var(--_fg);
+  background-color: var(--_bg);
+}
+
+#{$selector}-wrapper[data-animating="in"] {
+  animation-name: tooltipPop;
+}
+#{$selector}-wrapper[data-animating="out"] {
+  animation-name: tooltipPop;
+  animation-direction: reverse;
+}
+@keyframes tooltipPop {
+  from {
+    opacity: 0;
+    scale: 0.8;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+#{$selector}-arrow {
+  --_size: 0.5em;
+
+  position: absolute;
+  width: var(--_size);
+  aspect-ratio: 1;
+  z-index: -1;
+  rotate: 45deg;
+  background-color: var(--_bg);
+}
+
+@if $is-transparent {
+  #{$selector}-arrow[data-direction="top"] {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  #{$selector}-arrow[data-direction="bottom"] {
+    clip-path: polygon(100% 100%, 100% 0, 0 100%);
+  }
+  #{$selector}-arrow[data-direction="left"] {
+    clip-path: polygon(0 0, 0% 100%, 100% 100%);
+  }
+  #{$selector}-arrow[data-direction="right"] {
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+  }
+}
