@@ -121,8 +121,18 @@ export const tooltip: Action<HTMLElement, Config> = (node: HTMLElement, opts: Co
   }
 
   function animate(type: string) {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       tooltip.wrapper.setAttribute('data-animating', type);
+
+      const style = getComputedStyle(tooltip.wrapper);
+      const animation = parseFloat(style.getPropertyValue('animation-duration'));
+      const transition = parseFloat(style.getPropertyValue('transition-duration'));
+      if (animation <= 0 && transition <= 0) {
+        tooltip.wrapper.removeAttribute('data-animating');
+        console.error('No animation found.');
+        reject();
+      }
+
       tooltip.wrapper.addEventListener('animationend', () => {
         tooltip.wrapper.removeAttribute('data-animating');
         resolve();

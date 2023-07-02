@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tooltip, type Config } from '$lib';
-  import '$lib/tooltip/styles.css';
+  import '$lib/styles.scss';
 
   const opts: Config = {
     content: 'Hello, tooltip!',
