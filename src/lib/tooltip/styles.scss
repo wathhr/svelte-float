@@ -13,6 +13,9 @@ $is-transparent: false !default;
   top: 0;
   left: 0;
 
+  pointer-events: none;
+  user-select: none;
+
   transform-origin: var(--_origin);
   animation-timing-function: ease-in-out;
   animation-fill-mode: forwards;
@@ -24,13 +27,14 @@ $is-transparent: false !default;
 }
 
 #{$selector}-wrapper[data-animating="in"] {
-  animation-name: tooltipPop;
+  animation-name: SvelteFloat-tooltipPop;
 }
 #{$selector}-wrapper[data-animating="out"] {
-  animation-name: tooltipPop;
+  animation-name: SvelteFloat-tooltipPop;
   animation-direction: reverse;
 }
-@keyframes tooltipPop {
+
+@keyframes SvelteFloat-tooltipPop {
   from {
     opacity: 0;
     scale: 0.8;
@@ -52,17 +56,15 @@ $is-transparent: false !default;
   background-color: var(--_bg);
 }
 
-@if $is-transparent {
-  #{$selector}-arrow[data-direction="top"] {
-    clip-path: polygon(0 0, 100% 0, 0 100%);
-  }
-  #{$selector}-arrow[data-direction="bottom"] {
-    clip-path: polygon(100% 100%, 100% 0, 0 100%);
-  }
-  #{$selector}-arrow[data-direction="left"] {
-    clip-path: polygon(0 0, 0% 100%, 100% 100%);
-  }
-  #{$selector}-arrow[data-direction="right"] {
-    clip-path: polygon(0 0, 100% 0, 100% 100%);
-  }
+#{$selector}-arrow[data-direction="top"] {
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+#{$selector}-arrow[data-direction="bottom"] {
+  clip-path: polygon(100% 100%, 100% 0, 0 100%);
+}
+#{$selector}-arrow[data-direction="left"] {
+  clip-path: polygon(0 0, 0% 100%, 100% 100%);
+}
+#{$selector}-arrow[data-direction="right"] {
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
 }

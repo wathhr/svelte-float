@@ -5,7 +5,12 @@
   const opts: Config = {
     content: 'Hello, tooltip!',
     target: '#layers',
+    placement: 'bottom',
   };
+
+  setTimeout(() => {
+    opts.placement = 'bottom-end';
+  }, 2000);
 </script>
 
 <main>

@@ -1,6 +1,5 @@
-// TODO: Make it so you can add custom elements
-
-import { deepMerge, em2px, generateID } from '$lib/utils';
+import deepMerge from 'deepmerge';
+import { em2px, generateID } from '$lib/utils';
 import type { Config, RequiredConfig } from './types';
 import type { Action } from 'svelte/action';
 import {
@@ -22,60 +21,16 @@ export const tooltip: Action<HTMLElement, Config> = (node: HTMLElement, opts: Co
     content: node.title,
     target: 'body',
     visible: 'auto',
-    computePositionCallback: (data, { wrapper, arrow }) => {
-      const { x, y, placement, middlewareData } = data;
-      wrapper.style.left = x + 'px';
-      wrapper.style.top = y + 'px';
-
-      const placementParts = placement.split('-') as [
-        'top' | 'bottom' | 'left' | 'right',
-        'start' | 'end' | null
-      ];
-      const opposites = {
-        top: 'bottom',
-        bottom: 'top',
-        left: 'right',
-        right: 'left',
-      };
-      const opposite = opposites[placementParts[0]];
-
-      let originCross = 'center';
-      if (placement === 'top' || placement === 'bottom') {
-        if (placementParts[1] === 'start') originCross = 'top';
-        else if (placementParts[1] === 'end') originCross = 'bottom';
-      } else {
-        if (placementParts[1] === 'start') originCross = 'left';
-        else if (placementParts[1] === 'end') originCross = 'right';
-      }
-
-      Object.assign(wrapper.style, {
-        'transform-origin': opposite + ' ' + originCross,
-      });
-
-      if (middlewareData.arrow) {
-        const { x, y } = middlewareData.arrow;
-
-        arrow?.setAttribute('data-direction', opposite);
-        Object.assign(arrow!.style, {
-          left: x + 'px',
-          top: y + 'px',
-          [opposite]: 'calc(var(--_size) / -2)',
-        });
-      }
-    },
-    fuiConfig: {
-      placement: 'top',
-      middleware: [
-        fuiFlip(),
-        fuiOffset(em2px(0.5)),
-        fuiShift(),
-      ],
-    },
-    fuiAutoUpdateConfig: {}
+    placement: 'top',
+    middleware: [
+      fuiFlip(),
+      fuiOffset(em2px(0.5)),
+      fuiShift(),
+    ],
   };
 
-  opts = deepMerge(defaults, opts);
-  if (!opts.content) throw new Error('No content defined, either add the content option or add a title property to the element.');
+  let fullOpts = deepMerge(defaults, opts);
+  if (!fullOpts.content) throw new Error('No content defined, either add the content option or add a title property to the element.');
 
   const keydownHandler = (event: KeyboardEvent) => {
     switch (event.key) {
@@ -87,26 +42,26 @@ export const tooltip: Action<HTMLElement, Config> = (node: HTMLElement, opts: Co
 
   let inDom: boolean;
   const id = node.id ? node.id + '-tooltip' : generateID();
-  let tooltip = createTooltip(node, opts, id);
+  let tooltip = createTooltip();
 
   async function hide() {
-    if (inDom) {
-      await animate('out');
-      tooltip.wrapper.remove();
-      node.removeAttribute('aria-describedby');
-      inDom = false;
-    }
+    if (!inDom) return;
+
+    await animate('out');
+    tooltip.wrapper.remove();
+    node.removeAttribute('aria-describedby');
+    inDom = false;
   }
   async function show() {
-    if (!inDom) {
-      getElement(opts.target)!.appendChild(tooltip.wrapper);
-      inDom = true;
-      node.setAttribute('aria-describedby', id);
-      await animate('in');
-    }
+    if (inDom) return;
+
+    getElement(fullOpts.target).appendChild(tooltip.wrapper);
+    inDom = true;
+    node.setAttribute('aria-describedby', id);
+    await animate('in');
   }
 
-  switch (opts.visible) {
+  switch (fullOpts.visible) {
     case true: {
       show();
     } break;
@@ -140,20 +95,24 @@ export const tooltip: Action<HTMLElement, Config> = (node: HTMLElement, opts: Co
     });
   }
 
-  function handleUpdate(key: keyof Config, newOpts: Config) {
+  function handleUpdate(key: keyof Config, newOpts: RequiredConfig) {
+    if (newOpts[key] === fullOpts[key]) return;
+
     switch (key) {
       case 'content': {
         tooltip.content[newOpts.allowHtml ? 'innerHTML' : 'textContent'] = newOpts.content;
         node.setAttribute('data-tooltip-content', newOpts.content);
       } break;
+
       case 'allowHtml': {
         tooltip.content[newOpts.allowHtml ? 'innerHTML' : 'textContent'] = newOpts.content;
         tooltip.content.setAttribute('data-allow-html', newOpts.allowHtml ? 'true' : 'false');
         node.setAttribute('data-tooltip-content', newOpts.content);
       } break;
+
       case 'class': {
-        const modifiedOldClasses = getClasses(opts.class!);
-        const modifiedNewClasses = getClasses(newOpts.class!);
+        const modifiedOldClasses = getClasses(fullOpts.class);
+        const modifiedNewClasses = getClasses(newOpts.class);
 
         tooltip.wrapper.classList.remove(...modifiedOldClasses.wrapper);
         tooltip.wrapper.classList.add(...modifiedNewClasses.wrapper);
@@ -162,6 +121,7 @@ export const tooltip: Action<HTMLElement, Config> = (node: HTMLElement, opts: Co
         tooltip.arrow?.classList.remove(...modifiedOldClasses.arrow);
         tooltip.arrow?.classList.add(...modifiedNewClasses.arrow);
       } break;
+
       case 'visible': {
         if (!newOpts.visible) hide(); // this is put here because there's a breakthrough in the switch
         switch (newOpts.visible) {
@@ -180,19 +140,96 @@ export const tooltip: Action<HTMLElement, Config> = (node: HTMLElement, opts: Co
           } break;
         }
       } break;
+
       default: {
-        tooltip = createTooltip(node, opts, id);
+        tooltip = createTooltip();
       } break;
     }
   }
 
+  function createTooltip() {
+    const classes = getClasses(fullOpts.class ?? []);
+
+    const wrapper = document.createElement('div');
+    wrapper.classList.add(...classes.wrapper);
+    wrapper.role = 'tooltip';
+    wrapper.id = id;
+
+    const content = document.createElement('div');
+    content.classList.add(...classes.content);
+    content.setAttribute('data-allow-html', fullOpts.allowHtml.toString());
+    content[fullOpts.allowHtml ? 'innerHTML' : 'textContent'] = fullOpts.content;
+    wrapper.appendChild(content);
+
+    let arrow: HTMLDivElement | undefined;
+    if (fullOpts.arrow) {
+      arrow = document.createElement('div');
+      arrow.classList.add(...classes.arrow);
+      wrapper.appendChild(arrow);
+
+      fullOpts.middleware ??= [];
+      fullOpts.middleware.push(fuiArrow({ element: arrow }));
+    }
+
+    autoUpdate(node, wrapper, () => {
+      computePosition(node, wrapper, {
+        middleware: fullOpts.middleware,
+        placement: fullOpts.placement,
+      }).then((data) => {
+        const { x, y, placement, middlewareData } = data;
+        wrapper.style.left = x + 'px';
+        wrapper.style.top = y + 'px';
+
+        const placementParts = placement.split('-') as [
+          'top' | 'bottom' | 'left' | 'right',
+          'start' | 'end' | null
+        ];
+        const opposite = {
+          top: 'bottom',
+          bottom: 'top',
+          left: 'right',
+          right: 'left',
+        }[placementParts[0]];
+
+        let originCross = 'center';
+        if (placement === 'top' || placement === 'bottom') {
+          if (placementParts[1] === 'start') originCross = 'top';
+          else if (placementParts[1] === 'end') originCross = 'bottom';
+        } else {
+          if (placementParts[1] === 'start') originCross = 'left';
+          else if (placementParts[1] === 'end') originCross = 'right';
+        }
+
+        wrapper.style.transformOrigin = originCross;
+
+        if (middlewareData.arrow) {
+          const { x, y } = middlewareData.arrow;
+
+          arrow!.setAttribute('data-direction', opposite);
+          Object.assign(arrow!.style, {
+            left: x + 'px',
+            top: y + 'px',
+            [opposite]: 'calc(var(--_size) / -2)',
+          });
+        }
+      });
+    });
+
+    return {
+      wrapper,
+      content,
+      arrow,
+    };
+  }
+
   return {
     update(newOpts: Config) {
+      const fullNewOpts = deepMerge(defaults, newOpts);
       for (const k in newOpts) {
         const key = k as keyof Config;
-        handleUpdate(key, newOpts);
+        handleUpdate(key, fullNewOpts);
       }
-      opts = deepMerge(defaults, newOpts);
+      fullOpts = fullNewOpts;
     },
     destroy() {
       window.removeEventListener('keydown', keydownHandler);
@@ -206,47 +243,14 @@ export const tooltip: Action<HTMLElement, Config> = (node: HTMLElement, opts: Co
 
 export default tooltip;
 
-function createTooltip(node: HTMLElement, opts: Config, id: string) {
-  const classes = getClasses(opts.class ?? []);
-
-  const wrapper = document.createElement('div');
-  wrapper.classList.add(...classes.wrapper);
-  wrapper.role = 'tooltip';
-  wrapper.id = id;
-
-  const content = document.createElement('div');
-  content.classList.add(...classes.content);
-  content.setAttribute('data-allow-html', opts.allowHtml ? 'true' : 'false');
-  content[opts.allowHtml ? 'innerHTML' : 'textContent'] = opts.content;
-  wrapper.appendChild(content);
-
-  let arrow: HTMLDivElement | undefined;
-  if (opts.arrow) {
-    arrow = document.createElement('div');
-    arrow.classList.add(...classes.arrow);
-    wrapper.appendChild(arrow);
-
-    opts.fuiConfig!.middleware ??= [];
-    opts.fuiConfig!.middleware.push(fuiArrow({ element: arrow }));
-  }
-
-  autoUpdate(node, wrapper, () => {
-    computePosition(node, wrapper, opts.fuiConfig).then((computePositionReturn) => {
-      opts.computePositionCallback!(computePositionReturn, { wrapper, content, arrow });
-    });
-  });
-
-  return {
-    wrapper,
-    content,
-    arrow,
-  };
-}
 
 function getElement(elem: Config['target']) {
-  return typeof elem === 'string'
+  const element = typeof elem === 'string'
     ? document.querySelector(elem)
     : elem;
+
+  if (!element) throw new Error('No element found.');
+  return element;
 }
 
 function getClasses(classes: RequiredConfig['class']) {

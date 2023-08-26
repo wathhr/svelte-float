@@ -24,20 +24,18 @@
 }
 
 .tooltip-wrapper[data-animating="in"] {
-  animation-name: tooltipPop;
+  animation-name: SvelteFloat-tooltipPop;
 }
-
 .tooltip-wrapper[data-animating="out"] {
-  animation-name: tooltipPop;
+  animation-name: SvelteFloat-tooltipPop;
   animation-direction: reverse;
 }
 
-@keyframes tooltipPop {
+@keyframes SvelteFloat-tooltipPop {
   from {
     opacity: 0;
     scale: 0.8;
   }
-
   to {
     opacity: 1;
     scale: 1;
@@ -55,7 +53,7 @@
   background-color: var(--_bg);
 }
 
-/* .tooltip-arrow[data-direction="top"] {
+.tooltip-arrow[data-direction="top"] {
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 .tooltip-arrow[data-direction="bottom"] {
@@ -66,4 +64,4 @@
 }
 .tooltip-arrow[data-direction="right"] {
   clip-path: polygon(0 0, 100% 0, 100% 100%);
-} */
+}
